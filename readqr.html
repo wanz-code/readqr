@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Reader</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', sans-serif;
+}
+body {
+  background: linear-gradient(135deg, #00aaff, #0066cc);
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.container {
+  background: rgba(255,255,255,0.12);
+  border-radius: 20px;
+  padding: 30px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  max-width: 420px;
+  width: 100%;
+  animation: fadeIn 0.9s ease-out;
+  text-align: center;
+}
+h1 {
+  font-size: 1.6rem;
+  margin-bottom: 15px;
+}
+input[type="file"] {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.9);
+  cursor: pointer;
+}
+button {
+  padding: 10px 15px;
+  background: #00c3ff;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: 0.3s;
+  margin-top: 10px;
+}
+button:hover {
+  background: #009fcc;
+}
+.result {
+  margin-top: 20px;
+  animation: fadeInUp 0.6s ease-in-out;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.result p, .result a {
+  color: #fff;
+  background: rgba(0,0,0,0.3);
+  padding: 8px;
+  border-radius: 8px;
+  display: inline-block;
+  max-width: 100%;
+  word-break: break-word;
+}
+.result video, .result audio, .result img {
+  margin-top: 10px;
+  max-width: 100%;
+  border-radius: 10px;
+}
+.watermark {
+  margin-top: auto;
+  padding: 15px;
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.7);
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>QR Reader</h1>
+  <input type="file" id="fileInput" accept="image/*">
+  <button id="scanBtn">Scan QR</button>
+  <div class="result" id="result"></div>
+</div>
+<div class="watermark">© Wanz Official</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.min.js"></script>
+<script>
+const fileInput = document.getElementById('fileInput');
+const scanBtn = document.getElementById('scanBtn');
+const resultDiv = document.getElementById('result');
+let uploadedImage = null;
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => uploadedImage = e.target.result;
+  reader.readAsDataURL(file);
+});
+
+scanBtn.addEventListener('click', () => {
+  if (!uploadedImage) {
+    resultDiv.innerHTML = '<p style="color:#ff8080;">Silakan upload gambar QR terlebih dahulu!</p>';
+    return;
+  }
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0, img.width, img.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, canvas.width, canvas.height);
+    
+    resultDiv.innerHTML = '';
+    if (code) {
+      const data = code.data.trim();
+
+      // Video
+      if (data.match(/\.(mp4|webm|ogg)$/i)) {
+        resultDiv.innerHTML = `<video controls src="${data}"></video>
+          <br><button onclick="downloadMedia('${data}')">Download Media</button>`;
+      
+      // Audio
+      } else if (data.match(/\.(mp3|wav|ogg)$/i)) {
+        resultDiv.innerHTML = `<audio controls src="${data}"></audio>
+          <br><button onclick="downloadMedia('${data}')">Download Media</button>`;
+      
+      // Gambar
+      } else if (data.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        resultDiv.innerHTML = `<img src="${data}"/>
+          <br><button onclick="downloadMedia('${data}')">Download Media</button>`;
+      
+      // Link
+      } else if (data.startsWith('http')) {
+        resultDiv.innerHTML = `<p>Link: <a href="${data}" target="_blank">${data}</a></p>
+          <br><button onclick="downloadMedia('${data}')">Download Media</button>`;
+      
+      // Teks biasa
+      } else {
+        resultDiv.innerHTML = `<p>${data}</p>
+          <br><button onclick="copyText('${data}')">Copy Teks</button>`;
+      }
+    } else {
+      resultDiv.innerHTML = '<p style="color: #ff8080;">QR tidak ditemukan atau tidak valid!</p>';
+    }
+  };
+  img.src = uploadedImage;
+});
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    alert("Teks berhasil disalin!");
+  });
+}
+
+function downloadMedia(url) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+</script>
+</body>
+</html>
